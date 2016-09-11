@@ -1,0 +1,44 @@
+Luciana Viziru - 332CA
+
+Readme - Teama 4 SO -  Planificator de threaduri
+
+Codul sursa a fost scris cu un tab de dimensiune 4.
+
+In implementare am folosit un modul de linkedlist pentru task-urile aflate in
+asteptare si un modul task_queue pentru coada de task-uri ready.
+
+linkedlist va primi referinta la o structura task deja alocata si initializata
+si o va adauga ca valoare a unui nod.
+
+task_queue este o coada cu prioritati implementata sub forma unui heap. Priori-
+tatea task-urilor este data de campul priority din structura task, iar in cazul
+prioritatilor egale, se face diferenta cu ajutorul campului queue_id, setat la
+inserarea in coada. Valoarea acestui camp este data de campul queue_id din
+structura task_queue.
+Dimensiunea initiala a containerului este data de define-ul INIT_SIZE. Daca se
+ajunge la max_capacity, capacitatea containerului se dubleaza. Daca in container
+sunt mai putin de un sfert din max_capacity elemente, containerul isi va injuma-
+tati dimensunea. Aceste verificari se fac la add, respectiv pop. Redimenionarea
+se face cu ajutorul functiei interne resize, iar proprietatea de heap se mentine
+prin functiile de heapify_up su heapify_down. De asemena, la add/pop se modifica
+starea in READY/RUNNING.
+
+Pentru sincronizare, am ales sa folosesc mutex-uri. Threadurile se blocheaza
+facand lock pe mutex-ul inclus in structura task a threadului. Pentru primul
+thread din scheduler, nu se face lock. La creare, threadul care executa fork va
+face lock pe mutex, urmand ca atunci cand threadul nou ajunge in starea RUNNING,
+sa se faca unlock. Pentru a putea accesa mutex-ul threadului care incearca sa
+isi continue executia, am folosit Thread Specific Data cu o cheie tinuta in
+structura scheduler-ului, creata la so_init, iar valoarea este adresa mutex-ului
+din structura task si este setata la intrarea in thread_start. Inainte de return,
+cu exceptia so_init, se apeleaza functia schedule() pentru planificare si se
+continua cu mutex lock si unlock pentru blocarea threadului pana va fi planifi-
+cat ca RUNNING.
+
+Contorizarea instructiunilor executate se face in functia schedule.
+Eliberarea memoriei structurii de task se face atunci cand ajunge in starea
+TERMINATED. Asteptarea terminarii tuturor task-urilor se face cu ajutorul unei
+variabile conditie care va fi setata atunci cand running_task ajunge in starea
+TERMINATED si nu mai exista task-uri in coada ready. Nu am verificat daca mai
+exista threaduri in asteptare, deoarece se garanteaza ca va exista intotdeauna
+un thread ce poate fi planificat.
