@@ -1,44 +1,40 @@
-Luciana Viziru - 332CA
+Luciana Viziru
+Thread Scheduler
 
-Readme - Teama 4 SO -  Planificator de threaduri
+The linkedlist was used as a container for the waiting tasks and the task_queue
+for the tasks in a ready state.
 
-Codul sursa a fost scris cu un tab de dimensiune 4.
+The linkedlist will receive a reference to a task struct already allocated and
+initialized and it will add it as the last node in the list.
 
-In implementare am folosit un modul de linkedlist pentru task-urile aflate in
-asteptare si un modul task_queue pentru coada de task-uri ready.
+task_queue is a priority queue implemented using a heap. The priority of the
+tasks is given by the priority field of the task struct. In case of equal
+priorities, the field queue_id, which is set at the entry in task_queue, is used
+for ordering.
+The initial capacity of the container is given by the define INIT_SIZE. If
+max_capacity is reached, then the container capacity will double. If there are
+less then a quarter of max_capacity elements in the container at any given time,
+the queue will halve its size. These checks are preformed at add, respectively
+pop operations. The internal function resize() is called when changing the size
+of the queue and the heap property is maintained using the heapify_up() and
+heapify_down() functions. When added/popped, the state of a task is changed to
+READY/RUNNING.
 
-linkedlist va primi referinta la o structura task deja alocata si initializata
-si o va adauga ca valoare a unui nod.
+Synchronization is assured using mutexes. The threads are blocked by
+performing a lock operation on the mutex inside the task struct. The first ever
+thread of the scheduler is not locked. When a task is created, the thread
+executing the fork call will lock the new task's mutex. When the new thread
+reaches the RUNNING state, unlock is performed. In order to access a thread's
+mutex when unlocking it, Thread Specific Data was used. The key is held as a
+field of the scheduler struct and the individual value is the address of the
+task mutex.
+Before returning from all "actions", the schedule() function is called in order
+to take into account the performed operation and trigger rescheduling,
+if necessary.
 
-task_queue este o coada cu prioritati implementata sub forma unui heap. Priori-
-tatea task-urilor este data de campul priority din structura task, iar in cazul
-prioritatilor egale, se face diferenta cu ajutorul campului queue_id, setat la
-inserarea in coada. Valoarea acestui camp este data de campul queue_id din
-structura task_queue.
-Dimensiunea initiala a containerului este data de define-ul INIT_SIZE. Daca se
-ajunge la max_capacity, capacitatea containerului se dubleaza. Daca in container
-sunt mai putin de un sfert din max_capacity elemente, containerul isi va injuma-
-tati dimensunea. Aceste verificari se fac la add, respectiv pop. Redimenionarea
-se face cu ajutorul functiei interne resize, iar proprietatea de heap se mentine
-prin functiile de heapify_up su heapify_down. De asemena, la add/pop se modifica
-starea in READY/RUNNING.
-
-Pentru sincronizare, am ales sa folosesc mutex-uri. Threadurile se blocheaza
-facand lock pe mutex-ul inclus in structura task a threadului. Pentru primul
-thread din scheduler, nu se face lock. La creare, threadul care executa fork va
-face lock pe mutex, urmand ca atunci cand threadul nou ajunge in starea RUNNING,
-sa se faca unlock. Pentru a putea accesa mutex-ul threadului care incearca sa
-isi continue executia, am folosit Thread Specific Data cu o cheie tinuta in
-structura scheduler-ului, creata la so_init, iar valoarea este adresa mutex-ului
-din structura task si este setata la intrarea in thread_start. Inainte de return,
-cu exceptia so_init, se apeleaza functia schedule() pentru planificare si se
-continua cu mutex lock si unlock pentru blocarea threadului pana va fi planifi-
-cat ca RUNNING.
-
-Contorizarea instructiunilor executate se face in functia schedule.
-Eliberarea memoriei structurii de task se face atunci cand ajunge in starea
-TERMINATED. Asteptarea terminarii tuturor task-urilor se face cu ajutorul unei
-variabile conditie care va fi setata atunci cand running_task ajunge in starea
-TERMINATED si nu mai exista task-uri in coada ready. Nu am verificat daca mai
-exista threaduri in asteptare, deoarece se garanteaza ca va exista intotdeauna
-un thread ce poate fi planificat.
+The schedule function counts the number of instructions executed. The memory is
+freed when a thread reaches the TERMINATED state. A condition variable is used
+for waiting for all the tasks in the scheduler to complete. Therefore, it is set
+when running_task reaches the TERMINATED state and the ready_queue is empty.
+It is guaranteed that at all times, there is a READY task which can be scheduled.
+Therefore, the waiting tasks needn't be checked for the end of the simulation.
